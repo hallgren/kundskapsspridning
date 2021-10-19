@@ -61,9 +61,25 @@ func TestRemoveFromSite(t *testing.T) {
 
 func TestDisconnect(t *testing.T) {
 	d := device.FoundViaBonjour("192.168.0.8", "AAABBB123")
-	//d.NoLongerReachable()
+	err := d.Disconnect()
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	if len(d.Events()) != 2 {
-		t.Fatalf("expected 2 event got %d", len(d.Events()))
+	if len(d.Events()) != 3 {
+		t.Fatalf("expected 3 event got %d", len(d.Events()))
+	}
+
+	if d.Connected {
+		t.Fatal("device is connected")
+	}
+
+	err = d.Connect()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !d.Connected {
+		t.Fatal("device is disconnected")
 	}
 }

@@ -15,7 +15,9 @@ type Device struct {
 	IP         string
 }
 
+//
 // Device Events
+//
 
 // DiscoveredViaBonjour constructor event
 type DiscoveredViaBonjour struct {
@@ -35,9 +37,15 @@ type Disconnected struct{}
 // Connected when the device is online
 type Connected struct{}
 
+//
+// Device errors
+//
+
 // Errors returned on failing commands
 var ErrAlreadyPartOfSite = fmt.Errorf("device is already part of site")
 var ErrNotPartOfSite = fmt.Errorf("device is not part of site")
+var ErrAlreadyDisconnected = fmt.Errorf("device already disconnected")
+var ErrAlreadyConnected = fmt.Errorf("device already connected")
 
 // Transitions method to build the current state of the device
 func (d *Device) Transition(event eventsourcing.Event) {
@@ -47,6 +55,8 @@ func (d *Device) Transition(event eventsourcing.Event) {
 		d.Serial = e.Serial
 	case *Connected:
 		d.Connected = true
+	case *Disconnected:
+		d.Connected = false
 	case *AddedToSite:
 		d.PartOfSite = true
 	case *RemovedFromSite:
@@ -54,16 +64,17 @@ func (d *Device) Transition(event eventsourcing.Event) {
 	}
 }
 
-// Constructor
+//
+// Commands
+//
 
+// Constructor
 func FoundViaBonjour(ip, serial string) *Device {
 	d := Device{}
 	d.TrackChange(&d, &DiscoveredViaBonjour{IP: ip, Serial: serial})
 	d.TrackChange(&d, &Connected{})
 	return &d
 }
-
-// Commands
 
 func (d *Device) AddToSite() error {
 	if d.PartOfSite {
@@ -78,5 +89,21 @@ func (d *Device) RemoveFromSite() error {
 		return ErrNotPartOfSite
 	}
 	d.TrackChange(d, &RemovedFromSite{})
+	return nil
+}
+
+func (d *Device) Disconnect() error {
+	if !d.Connected {
+		return ErrAlreadyDisconnected
+	}
+	d.TrackChange(d, &Disconnected{})
+	return nil
+}
+
+func (d *Device) Connect() error {
+	if d.Connected {
+		return ErrAlreadyConnected
+	}
+	d.TrackChange(d, &Connected{})
 	return nil
 }
