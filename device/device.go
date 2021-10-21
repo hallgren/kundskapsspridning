@@ -6,14 +6,6 @@ import (
 	"github.com/hallgren/eventsourcing"
 )
 
-// Device entity
-type Device struct {
-	eventsourcing.AggregateRoot
-	SerialNumber string
-	IP           string
-	Connected    bool
-}
-
 //
 // Device Events
 //
@@ -36,13 +28,14 @@ type Disconnected struct{}
 // Connected when the device is online
 type Connected struct{}
 
-//
-// Command errors
-//
-
-// Errors returned on failing commands
-var ErrAlreadyDisconnected = fmt.Errorf("device already disconnected")
-var ErrAlreadyConnected = fmt.Errorf("device already connected")
+// Entity
+// Device entity
+type Device struct {
+	eventsourcing.AggregateRoot
+	SerialNumber string
+	IP           string
+	Connected    bool
+}
 
 // Transitions method to build the current state of the device
 func (d *Device) Transition(event eventsourcing.Event) {
@@ -63,6 +56,13 @@ func (d *Device) Transition(event eventsourcing.Event) {
 //
 // Commands
 //
+
+// Errors
+//
+
+// Errors returned on failing commands
+var ErrAlreadyDisconnected = fmt.Errorf("device already disconnected")
+var ErrAlreadyConnected = fmt.Errorf("device already connected")
 
 // Constructors
 func FoundViaBonjour(ip, serial string) *Device {
