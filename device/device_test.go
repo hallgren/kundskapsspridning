@@ -35,20 +35,18 @@ func TestDisconnectConnect(t *testing.T) {
 		t.Fatalf("expected last event to be Disconnected but was %s", d.Events()[2].Reason)
 	}
 
-	if d.Connected {
-		t.Fatal("device is connected")
-	}
-
 	// device is connected
 	err = d.Reachable()
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	// last event should be a connected event
 	if d.Events()[3].Reason != "Connected" {
 		t.Fatalf("expected last event to be Connected but was %s", d.Events()[3].Reason)
 	}
 
+	// test that current state is updated
 	if !d.Connected {
 		t.Fatal("device is disconnected")
 	}
