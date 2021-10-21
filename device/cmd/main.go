@@ -13,26 +13,11 @@ import (
 )
 
 func main() {
-	serializer := eventsourcing.NewSerializer(json.Marshal, json.Unmarshal)
-	serializer.RegisterTypes(&device.Device{},
-		func() interface{} { return &device.DiscoveredViaBonjour{} },
-		func() interface{} { return &device.AddedToSite{} },
-		func() interface{} { return &device.RemovedFromSite{} },
-		func() interface{} { return &device.Connected{} },
-		func() interface{} { return &device.Disconnected{} },
-	)
 
-	db, err := sql.Open("sqlite3", "test.db")
-	if err != nil {
-		panic(err)
-	}
-	sqlEventStore := sqles.Open(db, *serializer)
-	if err != nil {
-		panic(err)
-	}
-	sqlEventStore.Migrate()
+	// setup event store to save and get events
+	es := setupEventStore()
 
-	// create a entity and some events
+	// create a device entity
 	d := device.FoundViaBonjour("192.168.0.99", "AABBCC")
 	d.AddToSite()
 
@@ -40,7 +25,7 @@ func main() {
 
 	// repository
 	//
-	repository := eventsourcing.NewRepository(sqlEventStore, nil)
+	repository := eventsourcing.NewRepository(es, nil)
 	repository.Save(d)
 	fmt.Println("########")
 	spew.Dump(d)
@@ -65,7 +50,7 @@ func main() {
 	repository.Get(d.ID(), &d2)
 
 	d2.RemoveFromSite()
-	err = repository.Save(&d2)
+	err := repository.Save(&d2)
 	if err != nil {
 		fmt.Println("could not store events on d2", err)
 	}
@@ -78,6 +63,28 @@ func main() {
 
 	// global events
 	//
-	globalEvents, _ := sqlEventStore.GlobalEvents(1, 100)
+	globalEvents, _ := es.GlobalEvents(1, 100)
 	spew.Dump(globalEvents)
+}
+
+func setupEventStore() *sqles.SQL {
+	serializer := eventsourcing.NewSerializer(json.Marshal, json.Unmarshal)
+	serializer.RegisterTypes(&device.Device{},
+		func() interface{} { return &device.DiscoveredViaBonjour{} },
+		func() interface{} { return &device.AddedToSite{} },
+		func() interface{} { return &device.RemovedFromSite{} },
+		func() interface{} { return &device.Connected{} },
+		func() interface{} { return &device.Disconnected{} },
+	)
+
+	db, err := sql.Open("sqlite3", "test.db")
+	if err != nil {
+		panic(err)
+	}
+	sqlEventStore := sqles.Open(db, *serializer)
+	if err != nil {
+		panic(err)
+	}
+	sqlEventStore.Migrate()
+	return sqlEventStore
 }
