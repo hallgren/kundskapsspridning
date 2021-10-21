@@ -17,62 +17,65 @@ func main() {
 	// setup event store to save and get events
 	es := setupEventStore()
 
+	// repository is the kit between the entity and the event store
+	repository := eventsourcing.NewRepository(es, nil)
+
 	// create a device entity
 	d := device.FoundViaBonjour("192.168.0.99", "AABBCC")
-	d.AddToSite()
+	spew.Dump(d.Events())
 
-	spew.Dump(d)
-
-	// repository
-	//
-	repository := eventsourcing.NewRepository(es, nil)
+	// store d events in the repository
 	repository.Save(d)
-	fmt.Println("########")
-	spew.Dump(d)
+	fmt.Println("######")
+	spew.Dump(d.Events())
 
-	// event subscription
-	//
-	// all events
-	subAll := repository.SubscriberAll(func(e eventsourcing.Event) {
-		fmt.Println("all", e)
-	})
-	subAll.Subscribe()
+	/*
+		// fetch the same device events from the repository and build the entity
+		d2 := device.Device{}
+		repository.Get(d.ID(), &d2)
 
-	// specific event
-	subReason := repository.SubscriberSpecificEvent(func(e eventsourcing.Event) {
-		fmt.Println("specific event", e.Reason, e)
-	}, &device.RemovedFromSite{})
-	subReason.Subscribe()
+		fmt.Println("########")
+		spew.Dump(d2)
 
-	// concurrency garanty
-	//
-	d2 := device.Device{}
-	repository.Get(d.ID(), &d2)
+			// optimistic concurrency
+			//
+			d2.NotReachable()
+			err := repository.Save(&d2)
+			if err != nil {
+				fmt.Println("could not store events on d2", err)
+			}
 
-	d2.RemoveFromSite()
-	err := repository.Save(&d2)
-	if err != nil {
-		fmt.Println("could not store events on d2", err)
-	}
+			d.NotReachable()
+			err = repository.Save(d)
+			if err != nil {
+				fmt.Println("could not store events on d", err)
+			}
 
-	d.RemoveFromSite()
-	err = repository.Save(d)
-	if err != nil {
-		fmt.Println("could not store events on d", err)
-	}
+				// event subscription
+				//
+				// all events
+				subAll := repository.SubscriberAll(func(e eventsourcing.Event) {
+					fmt.Println("all", e.Reason, e)
+				})
 
-	// global events
-	//
-	globalEvents, _ := es.GlobalEvents(1, 100)
-	spew.Dump(globalEvents)
+				// specific event
+				subReason := repository.SubscriberSpecificEvent(func(e eventsourcing.Event) {
+					fmt.Println("specific event", e.Reason, e)
+				}, &device.Connected{}, &device.Disconnected)
+
+				subAll.Subscribe()
+				subReason.Subscribe()
+					// global events
+					//
+					globalEvents, _ := es.GlobalEvents(1, 100)
+					spew.Dump(globalEvents)
+	*/
 }
 
 func setupEventStore() *sqles.SQL {
 	serializer := eventsourcing.NewSerializer(json.Marshal, json.Unmarshal)
 	serializer.RegisterTypes(&device.Device{},
 		func() interface{} { return &device.DiscoveredViaBonjour{} },
-		func() interface{} { return &device.AddedToSite{} },
-		func() interface{} { return &device.RemovedFromSite{} },
 		func() interface{} { return &device.Connected{} },
 		func() interface{} { return &device.Disconnected{} },
 	)
