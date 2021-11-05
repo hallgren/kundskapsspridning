@@ -55,12 +55,12 @@ func main() {
 				//
 				// all events
 				subAll := repository.SubscriberAll(func(e eventsourcing.Event) {
-					fmt.Println("all", e.Reason, e)
+					fmt.Println("all", e.Reason(), e)
 				})
 
 				// specific event
 				subReason := repository.SubscriberSpecificEvent(func(e eventsourcing.Event) {
-					fmt.Println("specific event", e.Reason, e)
+					fmt.Println("specific event", e.Reason(), e)
 				}, &device.Connected{}, &device.Disconnected)
 
 				subAll.Subscribe()
