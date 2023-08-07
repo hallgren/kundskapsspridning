@@ -39,7 +39,7 @@ type Device struct {
 
 // Transitions method to build the current state of the device
 func (d *Device) Transition(event eventsourcing.Event) {
-	switch e := event.Data.(type) {
+	switch e := event.Data().(type) {
 	case *DiscoveredViaBonjour:
 		d.IP = e.IP
 		d.SerialNumber = e.Serial
@@ -53,10 +53,17 @@ func (d *Device) Transition(event eventsourcing.Event) {
 	}
 }
 
-//
-// Commands
-//
+// Register bind the events to the repository when the aggregate is registered.
+func (d *Device) Register(f eventsourcing.RegisterFunc) {
+	f(
+		&DiscoveredViaBonjour{},
+		&DiscoveredViaSSDP{},
+		&Connected{},
+		&Disconnected{},
+	)
+}
 
+//
 // Errors
 //
 
@@ -78,6 +85,10 @@ func FoundViaSSDP(ip, serial string) *Device {
 	d.TrackChange(&d, &Connected{})
 	return &d
 }
+
+//
+// Commands
+//
 
 // Device commands
 // NotReachable - we can't access the device

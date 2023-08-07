@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 
 	"github.com/davecgh/go-spew/spew"
@@ -18,7 +17,8 @@ func main() {
 	es := setupEventStore()
 
 	// repository is the kit between the entity and the event store
-	repository := eventsourcing.NewRepository(es, nil)
+	repository := eventsourcing.NewRepository(es)
+	repository.Register(&device.Device{})
 
 	// create a device entity
 	d := device.FoundViaBonjour("192.168.0.99", "AABBCC")
@@ -73,18 +73,11 @@ func main() {
 }
 
 func setupEventStore() *sqles.SQL {
-	serializer := eventsourcing.NewSerializer(json.Marshal, json.Unmarshal)
-	serializer.RegisterTypes(&device.Device{},
-		func() interface{} { return &device.DiscoveredViaBonjour{} },
-		func() interface{} { return &device.Connected{} },
-		func() interface{} { return &device.Disconnected{} },
-	)
-
 	db, err := sql.Open("sqlite3", "test.db")
 	if err != nil {
 		panic(err)
 	}
-	sqlEventStore := sqles.Open(db, *serializer)
+	sqlEventStore := sqles.Open(db)
 	if err != nil {
 		panic(err)
 	}
